@@ -1,0 +1,24 @@
+# Settings for Backend (on Cloud Run).
+# See https://firebase.google.com/docs/app-hosting/configure#cloud-run
+runConfig:
+  minInstances: 0
+  maxInstances: 2
+  # concurrency: 80
+  # cpu: 1
+  # memoryMiB: 512
+
+env:
+  - variable: NEXT_PUBLIC_FIREBASE_APIKEY
+    secret: "NEXT_PUBLIC_FIREBASE_APIKEY"
+  - variable: NEXT_PUBLIC_FIREBASE_DOMAIN
+    value: "postown-ea4a4.firebaseapp.com"
+  - variable: NEXT_PUBLIC_FIREBASE_PROJECT_ID
+    value: "postown-ea4a4"
+  - variable: NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+    value: "postown-ea4a4.firebasestorage.app"
+  - variable: NEXT_PUBLIC_FIREBASE_SENDER_ID
+    value: "627536255440"
+  - variable: NEXT_PUBLIC_FIREBASE_APP_ID
+    value: "1:627536255440:web:6143ea407a1aec6f0481d5"
+  - variable: NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID
+    value: "G-PS39FKVGH4"
