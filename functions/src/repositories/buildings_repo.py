@@ -1,4 +1,6 @@
 import math
+
+from google.protobuf.internal.well_known_types import Timestamp
 from src.utils import logger
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -119,14 +121,17 @@ def create_building(
   return ref.id
 
 
-def get_posts_missing_category(town_id: str, limit: int = 100) -> List[Tuple[str, Dict[str, Any]]]:
+def get_posts_missing_category(town_id: str, limit: int = 100):
   """Firestore does not support 'field does not exist' queries; fetch a page and filter client-side."""
   res: List[Tuple[str, Dict[str, Any]]] = []
+  res2: List[Tuple[str, Dict[str, Any]], Dict[str, Any]] = []
   for d in posts_collection(town_id).order_by("_created_at", direction=firestore.Query.DESCENDING).limit(limit).stream():
     data = d.to_dict() or {}
     if "category" not in data:
       res.append((d.id, data))
-  return res
+    if data.get("remaining_exp", 0) > 0:
+      res2.append((d.id, data, {'category': data.get('category'), 'building_name': data.get('building_name')}))
+  return res, res2
 
 
 def update_post_category_and_exp(
@@ -147,12 +152,45 @@ def update_post_category_and_exp(
   )
 
 
+def batch_update_posts_category_and_exp(
+  town_id: str,
+  items: List[Tuple[str, str, int, Optional[str]]],
+) -> int:
+  """Batch update posts' category and obtainable/remaining exp.
+
+  Args:
+    town_id: Town identifier.
+    items: List of tuples (post_id, category, obtainable_exp, building_name).
+
+  Returns:
+    Number of posts scheduled for update (length of items).
+  """
+  if not items:
+    return 0
+  db = get_db()
+  batch = db.batch()
+  col = posts_collection(town_id)
+  for post_id, category, obtainable_exp, building_name in items:
+    ref = col.document(post_id)
+    batch.update(
+      ref,
+      {
+        "category": category,
+        "obtainable_exp": int(obtainable_exp),
+        "remaining_exp": int(obtainable_exp),
+        "building_name": building_name,
+      },
+    )
+  batch.commit()
+  return len(items)
+
+
 def set_post_remaining_exp_zero(town_id: str, post_id: str) -> None:
   """Set remaining_exp to 0 after the post's exp has been consumed for build/renovate."""
   posts_collection(town_id).document(post_id).update({"remaining_exp": 0})
 
 
-def add_post_to_building(town_id: str, building_id: str, post_id: str) -> bool:
+def add_post_to_building(_created_at: Timestamp, town_id: str, building_id: str, post_id: str, original_post_id: str) -> bool:
   """Link a post to a building by creating a doc under buildings/{id}/posts.
 
   Returns True if created, False if a duplicate was detected and nothing was created.
@@ -161,14 +199,9 @@ def add_post_to_building(town_id: str, building_id: str, post_id: str) -> bool:
   # duplicate check
   dup = col.where(filter=FieldFilter("post_id", "==", post_id)).limit(1).stream()
   for _ in dup:
-    logger.info(
-      "Duplicate building-post link skipped: town=%s building=%s post_id=%s",
-      town_id,
-      building_id,
-      post_id,
-    )
+    logger.info(f"Duplicate building-post link skipped: town={town_id} building={building_id} post_id={post_id}")
     return False
 
   ref = col.document()
-  ref.set({"post_id": post_id, "_created_at": firestore.SERVER_TIMESTAMP})
+  ref.set({"post_id": post_id, "original_post_id": original_post_id, "_created_at": _created_at})
   return True

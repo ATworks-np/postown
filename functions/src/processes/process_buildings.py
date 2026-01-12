@@ -1,7 +1,9 @@
+import traceback
+
 from src.utils import logger
 import math
 import random
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Tuple, Optional
 
 from firebase_admin import firestore
 
@@ -11,6 +13,7 @@ from src.clients.ai_client import AIClient
 from src.repositories.buildings_repo import (
   get_posts_missing_category,
   update_post_category_and_exp,
+  batch_update_posts_category_and_exp,
   get_buildings_by_category,
   get_center_building_level,
   pick_closest_to_center,
@@ -23,6 +26,7 @@ from src.repositories.buildings_repo import (
 from src.utils.grid_utils import build_grid_from_buildings
 from src.utils.storage_utils import upload_building_image_png
 from src.utils.image_utils import remove_bg_and_trim
+from src.utils.date import str_to_timestamp
 
 
 def _obtainable_exp_from_post(data: Dict[str, Any]) -> int:
@@ -47,6 +51,7 @@ def _choose_build_action(town_data: Dict[str, Any], settings: Dict[str, Any]) ->
   prob_map = settings.get("urban_planning", {})
   new_prob = int(prob_map.get(plan, prob_map.get("balance", 30)))
   r = random.randint(1, 100)
+  print(r, new_prob)
   return "new" if r <= new_prob else "renovate"
 
 
@@ -80,7 +85,7 @@ def process_buildings_for_all_towns() -> Dict[str, Any]:
     town_res: Dict[str, Any] = {"analyzed": 0, "renovated": 0, "built": 0, "image_updated": 0, "linked_posts": 0}
     try:
       # 1) Analyze posts without category
-      pending_posts = get_posts_missing_category(town_id, limit=100)
+      pending_posts, exp_pending_posts  = get_posts_missing_category(town_id, limit=100)
       batches: List[List[Tuple[str, Dict[str, Any]]]] = []
       # split in chunks of 10
       for i in range(0, len(pending_posts), 10):
@@ -97,18 +102,21 @@ def process_buildings_for_all_towns() -> Dict[str, Any]:
           if res:
             analyzed_results.append((pid, data, res))
 
-      # update posts with category and obtainable_exp
+      # update posts with category and obtainable_exp in batch
+      batch_items: List[Tuple[str, str, int, Optional[str]]] = []
       for pid, data, res in analyzed_results:
-        cat = str(res.get("category", "life"))
+        cat = str(res.get("category", "non_category"))
         bname = res.get("building_name")
         obtainable = _obtainable_exp_from_post(data)
-        update_post_category_and_exp(town_id, pid, cat, obtainable, bname)
-        town_res["analyzed"] += 1
+        batch_items.append((pid, cat, obtainable, bname))
+      if batch_items:
+        updated = batch_update_posts_category_and_exp(town_id, batch_items)
+        town_res["analyzed"] += int(updated)
 
       # 2) Building construction per analyzed item
       center_level = get_center_building_level(town_id)
-      for pid, data, res in analyzed_results:
-        cat = str(res.get("category", "life"))
+      for pid, data, res in analyzed_results + exp_pending_posts:
+        cat = str(res.get("category", "non_category"))
         bname = res.get("building_name")
 
         if cat == "non_category":
@@ -118,6 +126,8 @@ def process_buildings_for_all_towns() -> Dict[str, Any]:
         action = _choose_build_action(town_data, settings)
 
         if action == "renovate":
+          logger.info('renovating building')
+
           candidates = get_buildings_by_category(town_id, cat)
           # try from closest to center
           candidates_sorted = sorted(candidates, key=lambda it: abs(int(it[1].get("row", 0))) + abs(int(it[1].get("col", 0))))
@@ -139,10 +149,12 @@ def process_buildings_for_all_towns() -> Dict[str, Any]:
               _generate_and_upload_image(ai, town_id, selected_id, cat, bname or "", new_level, grid_size=1)
               town_res["image_updated"] += 1
             # Link the source post to the renovated building (dedupe inside repo)
-            if add_post_to_building(town_id, selected_id, pid):
+            _created_at = str_to_timestamp(data['row_data']['created_at'])
+            if add_post_to_building(_created_at, town_id, selected_id, pid, data['row_data']['tweet_id']):
               town_res["linked_posts"] += 1
             # After consuming obtainable_exp, set remaining_exp to 0
             set_post_remaining_exp_zero(town_id, pid)
+            logger.info(f'renovated building {selected_id}')
             continue
           # fallback to new build
 
@@ -165,13 +177,15 @@ def process_buildings_for_all_towns() -> Dict[str, Any]:
         _generate_and_upload_image(ai, town_id, new_id, cat, bname or "", level=1, grid_size=1)
         town_res["image_updated"] += 1
         # Link the source post to the newly built building
-        if add_post_to_building(town_id, new_id, pid):
+        _created_at = str_to_timestamp(data['row_data']['created_at'])
+        if add_post_to_building(_created_at, town_id, new_id, pid, data['row_data']['tweet_id']):
           town_res["linked_posts"] += 1
         # After consuming obtainable_exp, set remaining_exp to 0
         set_post_remaining_exp_zero(town_id, pid)
 
     except Exception as e:
-      logger.error(f"Failed processing town {town_id}: {e}")
+      error_stack = traceback.format_exc()
+      logger.error(f"build_towns_now failed: {e}\n{error_stack}")
       town_res["error"] = str(e)
     result["towns"][town_id] = town_res
 

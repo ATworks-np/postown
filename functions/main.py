@@ -4,7 +4,7 @@ Firebase Functions entrypoints.
 This file only wires HTTP/scheduled triggers to the internal implementation
 under functions/src to keep the code modular and reusable.
 """
-
+import traceback
 from src.utils import logger
 from firebase_functions import https_fn, scheduler_fn
 from firebase_functions.options import set_global_options
@@ -50,7 +50,8 @@ def build_towns_now(req: https_fn.Request) -> https_fn.Response:
     result = process_buildings_for_all_towns()
     return https_fn.Response(result, status=200)
   except Exception as e:
-    logger.error(f"build_towns_now failed: {e}")
+    error_stack = traceback.format_exc()
+    logger.error(f"build_towns_now failed: {e}\n{error_stack}")
     return https_fn.Response({"error": str(e)}, status=500)
 
 

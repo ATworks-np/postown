@@ -1,6 +1,6 @@
 "use client"
 import React from 'react'
-import { Box, Stack, Typography, Divider } from '@mui/material'
+import { Box, Stack, Typography } from '@mui/material'
 import type { BuildingPost } from '@/models/building_post'
 import { Tweet } from 'react-tweet'
 
@@ -25,7 +25,7 @@ export default function BuildingPostsList(props: BuildingPostsListProps) {
   return (
     <Stack ref={containerRef} spacing={0}>
       {posts.map((p) => {
-        const id = p.tweet_id ?? p.post_id
+        const id = p.original_post_id
         if (!id) return null
         return (
           <Box key={id} sx={{ width: '100%' }} data-theme={'light'}>

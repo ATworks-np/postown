@@ -10,7 +10,7 @@
   },
   "urban_planning": {
     "decentralization": 50,
-    "balance": 30,
+    "balance": 10,
     "centralization": 10
   },
   "level_progression": [

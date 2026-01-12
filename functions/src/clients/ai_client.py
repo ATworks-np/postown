@@ -128,7 +128,7 @@ class AIClient:
     if self._genai_client is not None:
       try:
         prompt = self.prompt_town_planner + "\n\n" + json.dumps(payload, ensure_ascii=False)
-        print('start placement')
+        logger.info('start placement by ai')
         schema = Placement.model_json_schema()
         resp = self._genai_client.models.generate_content(
           model="gemini-2.5-flash",

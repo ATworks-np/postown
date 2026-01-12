@@ -20,6 +20,10 @@ def store_posts_for_town(town_id: str, timeline: List[Dict[str, Any]]) -> Dict[s
   ops_in_batch = 0
 
   for item in timeline:
+    # Skip retweets
+    if item.get("retweeted_tweet"):
+      skipped += 1
+      continue
     tweet_id = str(item.get("tweet_id", ""))
     if not tweet_id:
       skipped += 1
@@ -27,6 +31,8 @@ def store_posts_for_town(town_id: str, timeline: List[Dict[str, Any]]) -> Dict[s
     if _post_exists(posts_ref, tweet_id):
       skipped += 1
       continue
+
+
 
     doc_ref = posts_ref.document()  # auto id
     data = {

@@ -5,7 +5,7 @@ import { useTown } from '../hooks/useTown'
 import { useBuildings } from '../hooks/useBuildings'
 import { useWindowSize } from '../hooks/useWindowSize'
 import BuildingItem from './BuildingItem'
-import React from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import BuildingOverlay from './BuildingOverlay'
 import { useSelectedBuilding } from '../hooks/useSelectedBuilding'
 import BuildingPostsList from './BuildingPostsList'
@@ -23,7 +23,7 @@ export type TownStageProps = {
 export default function TownStage(props: TownStageProps) {
   const {
     townId,
-    unitPx = 70,
+    unitPx = 100,
     minWidth = 320,
     minHeight = 240,
     // ルートの Container の上下パディング分（py:4 = 32px * 2）をデフォルトで差し引く
@@ -37,6 +37,62 @@ export default function TownStage(props: TownStageProps) {
   const win = useWindowSize({ width: 960, height: 640 })
 
   const { selected, open, select, clear } = useSelectedBuilding()
+
+  // Zoom (unitPx) — wheel to change smoothly
+  const [zoomPx, setZoomPx] = useState(unitPx)
+  const targetZoomRef = useRef(unitPx)
+  const rafRef = useRef<number | null>(null)
+
+  // sync when prop unitPx changes from outside (animate to it without direct setState)
+  useEffect(() => {
+    targetZoomRef.current = unitPx
+    animateZoom()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [unitPx])
+
+  const animateZoom = useCallback(() => {
+    // Smoothly approach target using exponential smoothing
+    const tick = () => {
+      const target = targetZoomRef.current
+      let shouldStop = false
+      setZoomPx(prev => {
+        const diff = target - prev
+        if (Math.abs(diff) < 0.05) {
+          shouldStop = true
+          return target
+        }
+        const next = prev + diff * 0.18 // smoothing factor
+        return next
+      })
+      if (shouldStop) {
+        if (rafRef.current) cancelAnimationFrame(rafRef.current)
+        rafRef.current = null
+        return
+      }
+      rafRef.current = requestAnimationFrame(tick)
+    }
+    if (rafRef.current == null) {
+      rafRef.current = requestAnimationFrame(tick)
+    }
+  }, [])
+
+  const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v))
+
+  const handleWheel = useCallback((e: React.WheelEvent) => {
+    // BuildingOverlay が開いている間はズームを変更しない
+    if (open) return
+    // Prevent page scroll while zooming stage
+    e.preventDefault()
+    // deltaY positive means wheel down → zoom out
+    // Use an exponential scale for smooth feel independent of frame rate
+    const sensitivity = 0.0016
+    const factor = Math.exp(-e.deltaY * sensitivity)
+    const minPx = 40
+    const maxPx = 260
+    const nextTarget = clamp(targetZoomRef.current * factor, minPx, maxPx)
+    targetZoomRef.current = nextTarget
+    animateZoom()
+  }, [animateZoom, open])
 
   const loading = town.loading || buildings.loading
   const error = town.error || buildings.error
@@ -71,21 +127,23 @@ export default function TownStage(props: TownStageProps) {
         width: stageW,
         height: stageH,
         mx: 'auto',
+        overflow: 'hidden',
         ...containerSx,
       }}
+      onWheel={handleWheel}
     >
       {(buildings.data ?? []).map(b => {
-        const logicalSize = b.grid_size ?? 6
-        const widthPx = logicalSize * unitPx
+        const logicalSize = b.grid_size ?? 1
+        const widthPx = logicalSize * zoomPx
         // isometric 風変換: x'=(x-y)*sqrt(2)/4, y'=(x+y)*sqrt(2)/4
         const x0 = b.row ?? 0
         const y0 = b.col ?? 0
-        const scale = Math.SQRT2 / 4 + (Math.SQRT2/8)
-        const xPrime = (x0 + y0) * scale
-        const yPrime = (x0 - y0) * scale
+        const scale = Math.SQRT2 / 4 + (Math.SQRT2/6)
+        const xPrime = (x0 + y0 - 1) * scale
+        const yPrime = (x0 - y0 - 1) * scale
         // UI ピクセルへ変換（左下アンカーは BuildingItem 側の transform で維持）
-        const left = Math.round(cx + xPrime * unitPx)
-        const top = Math.round(cy - yPrime * unitPx)
+        const left = Math.round(cx + xPrime * zoomPx)
+        const top = Math.round(cy - yPrime * zoomPx)
         return (
           <BuildingItem
             key={b.id}
