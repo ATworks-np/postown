@@ -29,7 +29,7 @@ export default function Home() {
             px: 1.5,
             py: 1,
             borderRadius: 2,
-            zIndex: 10,
+            zIndex: 9999,
             bgcolor: (theme) => theme.palette.background.paper,
           }}
         >

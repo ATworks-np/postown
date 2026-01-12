@@ -8,6 +8,7 @@ import BuildingItem from './BuildingItem'
 import React from 'react'
 import BuildingOverlay from './BuildingOverlay'
 import { useSelectedBuilding } from '../hooks/useSelectedBuilding'
+import BuildingPostsList from './BuildingPostsList'
 
 export type TownStageProps = {
   townId: string
@@ -120,6 +121,11 @@ export default function TownStage(props: TownStageProps) {
             <Typography variant="body2" color="text.secondary">
               Grid Size: {selected.grid_size} / Pos: ({selected.row}, {selected.col})
             </Typography>
+            <Divider sx={{ my: 2 }} />
+            <Typography variant="subtitle2" sx={{ mb: 1 }}>
+              Posts
+            </Typography>
+            <BuildingPostsList posts={selected.posts} />
           </Box>
         )}
       </BuildingOverlay>
