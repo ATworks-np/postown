@@ -1,0 +1,7 @@
+firebase_functions~=0.1.0
+firebase_admin>=6.5.0
+requests>=2.32.3
+python-dotenv>=1.0.1
+google-genai>=0.3.0
+Pillow>=10.0.0
+rembg[cpu]>=2.0.59

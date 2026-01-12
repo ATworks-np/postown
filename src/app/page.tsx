@@ -1,66 +1,81 @@
-import Image from "next/image";
-import styles from "./page.module.css";
+"use client"
+import { Container, TextField, Button, Paper } from '@mui/material'
+import { useXListId } from '../hooks/useXListId'
+import TownStage from '../components/TownStage'
+import { useRouter } from 'next/navigation'
+import { db } from '../firebase'
+import { collection, getDocs, limit, query, where } from 'firebase/firestore'
+
+const TOWN_ID = '3PJ0B7ZqINXYirzCvVEt'
 
 export default function Home() {
+  const xlist = useXListId()
+  const router = useRouter()
+
   return (
-    <div className={styles.page}>
-      <main className={styles.main}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className={styles.intro}>
-          <h1>To get started, edit the page.tsx file.</h1>
-          <p>
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className={styles.ctas}>
-          <a
-            className={styles.primary}
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+    <Container disableGutters sx={{ py: 4 }}>
+      <TownStage townId={TOWN_ID} unitPx={80}>
+        {/* 画面中央下側の入力 + Go ボタン（ステージ上に重ねて表示） */}
+        <Paper
+          elevation={3}
+          sx={{
+            position: 'absolute',
+            left: '50%',
+            bottom: '30%',
+            transform: 'translateX(-50%)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1,
+            px: 1.5,
+            py: 1,
+            borderRadius: 2,
+            zIndex: 10,
+            bgcolor: (theme) => theme.palette.background.paper,
+          }}
+        >
+          <TextField
+            size="small"
+            variant="filled"
+            label="x list idを入力"
+            value={xlist.value}
+            onChange={(e) => xlist.setValue(e.target.value)}
+          />
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={async () => {
+              const input = xlist.value?.trim()
+              if (!input) {
+                console.warn('x list id is empty')
+                return
+              }
+
+              try {
+                const townsRef = collection(db, 'towns')
+                const q = query(
+                  townsRef,
+                  where('post_group_id', '==', input),
+                  limit(1)
+                )
+                const snap = await getDocs(q)
+
+                if (snap.empty) {
+                  console.warn('No town found for post_group_id:', input)
+                  router.push('/towns/new')
+                  return
+                }
+
+                const doc = snap.docs[0]
+                router.push(`/towns/${doc.id}`)
+              } catch (e) {
+                console.error('Failed to search town by post_group_id', e)
+              }
+            }}
           >
-            <Image
-              className={styles.logo}
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className={styles.secondary}
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
-  );
+            街に訪れる
+          </Button>
+        </Paper>
+      </TownStage>
+    </Container>
+  )
 }

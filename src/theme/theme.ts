@@ -27,8 +27,8 @@ export const theme = createTheme({
     },
     // 背景色
     background: {
-      default: cottageColors.paperWhite, // アプリ全体の背景（画用紙）
-      paper: cottageColors.wallCream,    // CardやModalの背景（家の壁）
+      default: cottageColors.wallCream, // アプリ全体の背景（画用紙）
+      paper: cottageColors.paperWhite,    // CardやModalの背景（家の壁）
     },
     // テキストカラー
     text: {
