@@ -7,17 +7,18 @@ runConfig:
   # cpu: 1
   # memoryMiB: 512
 
-# Environment variables and secrets.
-# env:
-  # Configure environment variables.
-  # See https://firebase.google.com/docs/app-hosting/configure#user-defined-environment
-  # - variable: MESSAGE
-  #   value: Hello world!
-  #   availability:
-  #     - BUILD
-  #     - RUNTIME
-
-  # Grant access to secrets in Cloud Secret Manager.
-  # See https://firebase.google.com/docs/app-hosting/configure#secret-parameters
-  # - variable: MY_SECRET
-  #   secret: mySecretRef
+env:
+  - variable: NEXT_PUBLIC_FIREBASE_APIKEY
+    value: "AIzaSyDBwFKuHPtEyz1oXY6cTT0vYe7WTo9b4Go"
+  - variable: NEXT_PUBLIC_FIREBASE_DOMAIN
+    value: "postown-ea4a4.firebaseapp.com"
+  - variable: NEXT_PUBLIC_FIREBASE_PROJECT_ID
+    value: "postown-ea4a4"
+  - variable: NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+    value: "postown-ea4a4.firebasestorage.app"
+  - variable: NEXT_PUBLIC_FIREBASE_SENDER_ID
+    value: "627536255440"
+  - variable: NEXT_PUBLIC_FIREBASE_APP_ID
+    value: "1:627536255440:web:6143ea407a1aec6f0481d5"
+  - variable: NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID
+    value: "G-PS39FKVGH4"

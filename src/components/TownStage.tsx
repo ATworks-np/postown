@@ -6,7 +6,6 @@ import { useBuildings } from '../hooks/useBuildings'
 import { useWindowSize } from '../hooks/useWindowSize'
 import BuildingItem from './BuildingItem'
 import React from 'react'
-import type { Building } from '../models/building'
 import BuildingOverlay from './BuildingOverlay'
 import { useSelectedBuilding } from '../hooks/useSelectedBuilding'
 

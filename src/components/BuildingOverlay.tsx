@@ -4,6 +4,7 @@ import { Box, IconButton, Paper, Typography } from '@mui/material'
 import CloseIcon from '@mui/icons-material/Close'
 import { useTheme } from '@mui/material/styles'
 import useMediaQuery from '@mui/material/useMediaQuery'
+import { keyframes } from '@emotion/react'
 
 export type BuildingOverlayProps = {
   open: boolean
@@ -17,9 +18,50 @@ export default function BuildingOverlay(props: BuildingOverlayProps) {
   const theme = useTheme()
   const isDesktop = useMediaQuery(theme.breakpoints.up('sm'))
 
-  if (!open) return null
+  // Mount-while-exiting to enable fade-out/slide-out animations
+  const [render, setRender] = React.useState<boolean>(open)
+  const [exiting, setExiting] = React.useState<boolean>(false)
+
+  React.useEffect(() => {
+    if (open) {
+      setRender(true)
+      setExiting(false)
+      return
+    }
+    if (render) {
+      // start exit animation then unmount after it finishes
+      setExiting(true)
+      const t = setTimeout(() => {
+        setRender(false)
+        setExiting(false)
+      }, 260) // match panel animation duration
+      return () => clearTimeout(t)
+    }
+  }, [open, render])
+
+  if (!render) return null
 
   const panelWidth = isDesktop ? 500 : '100%'
+
+  const slideIn = keyframes({
+    from: { transform: 'translateX(100%)' },
+    to: { transform: 'translateX(0%)' },
+  })
+
+  const slideOut = keyframes({
+    from: { transform: 'translateX(0%)' },
+    to: { transform: 'translateX(100%)' },
+  })
+
+  const fadeIn = keyframes({
+    from: { opacity: 0 },
+    to: { opacity: 1 },
+  })
+
+  const fadeOut = keyframes({
+    from: { opacity: 1 },
+    to: { opacity: 0 },
+  })
 
   return (
     <Box
@@ -36,6 +78,7 @@ export default function BuildingOverlay(props: BuildingOverlayProps) {
           position: 'absolute',
           inset: 0,
           backgroundColor: 'rgba(0,0,0,0.4)',
+          animation: `${exiting ? fadeOut : fadeIn} 240ms ease-out forwards`,
         }}
       />
 
@@ -54,6 +97,8 @@ export default function BuildingOverlay(props: BuildingOverlayProps) {
           borderTopLeftRadius: 8,
           borderBottomLeftRadius: 8,
           overflow: 'hidden',
+          animation: `${exiting ? slideOut : slideIn} 260ms cubic-bezier(0.2, 0, 0, 1) forwards`,
+          willChange: 'transform',
         }}
       >
         <Box sx={{ position: 'relative', p: 2, borderBottom: `1px solid ${theme.palette.divider}` }}>

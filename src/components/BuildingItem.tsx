@@ -32,6 +32,9 @@ export default function BuildingItem(props: BuildingItemProps) {
     onClick,
   } = props
 
+  // Next.js Image requires a non-empty alt for accessibility. Ensure fallback text.
+  const safeAlt = (alt ?? '').trim() || 'Building image'
+
   const containerSx: SxProps<Theme> = {
     position: absolute ? 'absolute' : 'relative',
     left,
@@ -56,7 +59,7 @@ export default function BuildingItem(props: BuildingItemProps) {
     <Box sx={containerSx} onClick={onClick}>
       <Image
         src={src}
-        alt={alt}
+        alt={safeAlt}
         width={0}
         height={0}
         sizes={`${Math.round(widthPx)}px`}
