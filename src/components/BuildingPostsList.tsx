@@ -23,13 +23,13 @@ export default function BuildingPostsList(props: BuildingPostsListProps) {
   }
 
   return (
-    <Stack ref={containerRef} spacing={2} divider={<Divider flexItem />}>
+    <Stack ref={containerRef} spacing={0}>
       {posts.map((p) => {
         const id = p.tweet_id ?? p.post_id
         if (!id) return null
         return (
-          <Box key={id} sx={{ width: '100%' }}>
-            <Tweet id={id} />
+          <Box key={id} sx={{ width: '100%' }} data-theme={'light'}>
+            <Tweet id={id}/>
           </Box>
         )
       })}

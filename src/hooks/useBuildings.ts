@@ -41,8 +41,13 @@ export function useBuildings(townId: string, opts: UseBuildingsOptions = {}): Us
               const postsCol = collection(db, 'towns', qDeps.townId, 'buildings', docSnap.id, 'posts')
               const postsSnap = await getDocs(postsCol)
               posts = postsSnap.docs.map(d => d.data() as BuildingPost)
-              // Sort by created_at desc if available (ISO8601 string)
-              posts.sort((a, b) => (b._created_at || '').localeCompare(a._created_at || ''))
+              posts.sort((a, b) => {
+                // a や b の _created_at が無い場合のガード
+                const timeA = a._created_at?.toMillis?.() || 0;
+                const timeB = b._created_at?.toMillis?.() || 0;
+
+                return timeB - timeA; // 降順（新しい順）
+              });
             } catch {
               // If posts fetch fails for this building, fallback to empty array
               posts = []

@@ -25,7 +25,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ja" suppressHydrationWarning>
-      <body className={`${geistSans.variable} ${geistMono.variable}`}>
+      <body suppressHydrationWarning className={`${geistSans.variable} ${geistMono.variable}`}>
         <ThemeRegistry>
           {children}
         </ThemeRegistry>

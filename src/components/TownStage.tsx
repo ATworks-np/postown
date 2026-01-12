@@ -97,7 +97,7 @@ export default function TownStage(props: TownStageProps) {
             sx={{ zIndex:  - x0 + y0 + 100 }}
             hoverFilter={'drop-shadow(0 0 14px rgba(255,255,0,0.9))'}
             cursor={'pointer'}
-            onClick={() => select(b)}
+            onClick={() => {console.log(buildings.data); select(b)}}
           />
         )
       })}

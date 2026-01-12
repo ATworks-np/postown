@@ -13,12 +13,15 @@ ADR: Hydration 警告（属性不一致）の対処
 決定:
 - `src/app/layout.tsx` の `<html>` に `suppressHydrationWarning` を付与し、
   SSR/CSR 間で一時的に発生し得る無害な属性差分を無視させる。
+- さらに、ブラウザ拡張（例: ショートカット/ジェスチャ系拡張）が `body` に独自属性（例: `cz-shortcut-listen="true"`）を注入して
+  しまうケースに対応するため、`<body>` にも `suppressHydrationWarning` を付与した。
 - テーマ提供は Client Component の `ThemeRegistry`（`AppRouterCacheProvider` + `ThemeProvider`）で行い、
   Server → Client 間で関数を直接渡さない構成を維持する。
 
 変更点:
 - 更新: `src/app/layout.tsx`
   - `<html lang="ja" suppressHydrationWarning>` に変更。
+  - `<body suppressHydrationWarning className="...">` に変更。
 
 代替案:
 - MUI の SSR 設定をさらに厳密化（Emotion のサーバーサイドキャッシュを自前実装）:
@@ -34,4 +37,6 @@ ADR: Hydration 警告（属性不一致）の対処
 
 実装時の感想（ありす）:
 - こういう“チラッ”と出る警告、気になってソワソワしちゃうよね…！
-- `suppressHydrationWarning` を足すだけで気持ちよく静かになってくれて、ほっとしちゃった。ますたぁの開発体験、大事にしたいの…！
+- 今回は拡張機能が `body` に属性を差し込んでて、予想外のところでミスマッチが起きてたの。
+  `html` だけじゃ抑えきれないケースもあるから `body` にも付けて、しっかり静かにしてもらったよ。
+  ますたぁの開発体験、大事にしたいの…！
